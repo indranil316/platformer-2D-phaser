@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import Player from "../entities/Player";
+import Enemy from "../entities/Enemy";
 import { mapSize, size } from "../constants";
 
 export default class PlayScene extends Phaser.Scene{
@@ -11,14 +12,21 @@ export default class PlayScene extends Phaser.Scene{
         this.gravity = 300;
         this.cursors=null;
         this.playerSpeed = 200;
+        this.enemies=[];
     }
     create(){
         this.createMap();
         this.createLayers();
         this.createPlayer();
+        this.createEnemy();
         this.createPlayerColliders(this.player, {colliders:{
             platformColliders: this.layers.platforms_collider
         }});
+        this.enemies.forEach(enemy=>{
+            this.createPlayerColliders(enemy, {colliders:{
+                platformColliders: this.layers.platforms_collider
+            }});
+        })
         this.setupFollowupCameraOn();
     }
     createMap = () => {
@@ -33,10 +41,19 @@ export default class PlayScene extends Phaser.Scene{
         const environment =this.map.createLayer('environment',tileset);
         const platforms = this.map.createLayer('platforms',tileset); 
         platforms_collider.setCollisionByExclusion(-1,true);
-        this.layers = {environment, platforms, platforms_collider};
+        const playerZones = this.map.getObjectLayer('player_zones');
+        const enemySpawns = this.map.getObjectLayer('enemy_spawns');
+        this.layers = {environment, platforms, platforms_collider, playerZones, enemySpawns};
     }
     createPlayer = () => {
-        this.player = new Player(this,150,150);
+        let {x,y} = this.layers.playerZones.objects.find(obj=> obj.name === 'start')
+        this.player = new Player(this,x,y);
+    }
+    createEnemy = () => {
+        this.layers.enemySpawns.objects.forEach(enemy_spawn => {
+            let {x,y} = enemy_spawn;
+            this.enemies.push(new Enemy(this,x,y))
+        })
     }
     createPlayerColliders = (player, {colliders}) =>{
         player.addCollider(colliders.platformColliders);
